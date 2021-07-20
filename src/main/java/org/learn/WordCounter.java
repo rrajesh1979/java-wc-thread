@@ -22,7 +22,7 @@ public class WordCounter {
 
     static final HashMap<String, Integer> wordCount = new HashMap<>();
 
-    static int THREAD_COUNT = 5;
+    static int THREAD_COUNT = 10;
 
     public static void main(String[] args) {
         long startTime = System.nanoTime();
@@ -50,27 +50,15 @@ public class WordCounter {
             fsExecutorService.execute(new SplitFileRunnable());
         }
 
-        try {
-            fsExecutorService.awaitTermination(2000, TimeUnit.MILLISECONDS);
-            fsExecutorService.shutdown();
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
+        awaitTerminationAfterShutdown(fsExecutorService);
 
         //STEP 4: Get each line and count # of words
-
         ExecutorService wcExecutorService = Executors.newFixedThreadPool(THREAD_COUNT);
         for (int i = 0; i < THREAD_COUNT; i++) {
             wcExecutorService.execute(new WordCountRunnable());
         }
 
-        try {
-            wcExecutorService.awaitTermination(2000, TimeUnit.MILLISECONDS);
-            wcExecutorService.shutdown();
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
-
+        awaitTerminationAfterShutdown(wcExecutorService);
 
         log.info(wordCount.toString());
         long elapsedTime = System.nanoTime() - startTime;
@@ -179,6 +167,18 @@ public class WordCounter {
                 wordCount.merge(line.filePath, wordsInLine, Integer::sum);
             }
             return "SUCCESS";
+        }
+    }
+
+    public static void awaitTerminationAfterShutdown(ExecutorService threadPool) {
+        threadPool.shutdown();
+        try {
+            if (!threadPool.awaitTermination(60, TimeUnit.SECONDS)) {
+                threadPool.shutdownNow();
+            }
+        } catch (InterruptedException ex) {
+            threadPool.shutdownNow();
+            Thread.currentThread().interrupt();
         }
     }
 }
