@@ -1,7 +1,12 @@
 package org.learn;
 
+import com.mongodb.client.MongoClient;
+import com.mongodb.client.MongoClients;
+import com.mongodb.client.MongoCollection;
+import com.mongodb.client.MongoDatabase;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.bson.Document;
 
 import java.io.IOException;
 import java.nio.file.*;
@@ -22,7 +27,12 @@ public class WordCounter {
 
     static final HashMap<String, Integer> wordCount = new HashMap<>();
 
-    static int THREAD_COUNT = 10;
+    static int THREAD_COUNT = 5;
+
+    static String MONGODB_URI = "mongodb://localhost:27017";
+    static MongoClient mongoClient;
+    static MongoDatabase database;
+    static MongoCollection<Document> collection;
 
     public static void main(String[] args) {
         long startTime = System.nanoTime();
@@ -34,6 +44,8 @@ public class WordCounter {
         } else {
             sourceDirectory = "/Users/rrajesh1979/Documents/Learn/gitrepo/word-count/java-wc-thread/src/main/resources/";
         }
+
+        getMongoConnection();
 
         //STEP 1: Get list of files from source directory
         try {
@@ -128,14 +140,6 @@ public class WordCounter {
         }
     }
 
-    public static String updateWordCount(Line line) {
-        int wordsInLine = new StringTokenizer(line.line).countTokens();
-        synchronized (wordCount) {
-            wordCount.merge(line.filePath, wordsInLine, Integer::sum);
-        }
-        return "SUCCESS";
-    }
-
     static class WordCountRunnable implements Runnable {
 
         @Override
@@ -166,6 +170,7 @@ public class WordCounter {
             synchronized (wordCount) {
                 wordCount.merge(line.filePath, wordsInLine, Integer::sum);
             }
+            insertLine(line);
             return "SUCCESS";
         }
     }
@@ -180,5 +185,22 @@ public class WordCounter {
             threadPool.shutdownNow();
             Thread.currentThread().interrupt();
         }
+    }
+
+    public static void getMongoConnection() {
+        mongoClient = MongoClients.create(MONGODB_URI);
+        database = mongoClient.getDatabase("learn");
+        collection = database.getCollection("wordcount");
+    }
+
+    public static boolean insertLine(Line line) {
+        Document doc = new Document("file", line.filePath)
+                .append("line", line.line);
+        try {
+            collection.insertOne(doc);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return true;
     }
 }
