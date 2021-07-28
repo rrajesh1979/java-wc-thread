@@ -41,7 +41,7 @@ public class WordCounter {
         if (args.length >= 1) {
             sourceDirectory = args[0];
         } else {
-            sourceDirectory = "/Users/rrajesh1979/Documents/Learn/gitrepo/word-count/java-wc-thread/src/main/resources/";
+            sourceDirectory = "/Users/rrajesh1979/Documents/Learn/gitrepo/word-count/java-wc-thread/src/main/resources/stagefiles/";
         }
 
         getMongoConnection();
@@ -188,8 +188,8 @@ public class WordCounter {
 
     public static void getMongoConnection() {
         mongoClient = MongoClients.create(MONGODB_URI);
-        database = mongoClient.getDatabase("learn");
-        collection = database.getCollection("wordcount");
+        database = mongoClient.getDatabase("wordcountdb");
+        collection = database.getCollection("lines");
     }
 
     public static boolean insertLine(Line line) {
